@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pcm
+*.wav
+.env
+.DS_Store
+.pytest_cache/
+.mypy_cache/

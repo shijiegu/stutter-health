@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stutter-health</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1419;
+        --panel: #1a2330;
+        --text: #e8eef5;
+        --muted: #93a4b8;
+        --accent: #4fd1c5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 2.5rem 1.25rem 4rem;
+      }
+      h1 {
+        font-size: 1.75rem;
+        margin: 0 0 0.5rem;
+      }
+      p {
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      section {
+        background: var(--panel);
+        border-radius: 16px;
+        padding: 1.25rem 1.4rem;
+        margin-top: 1.25rem;
+      }
+      h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.05rem;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>stutter-health</h1>
+      <p>
+        Baseline shell for an ultra-low-latency accessibility client. Audio on
+        the wire is raw PCM 16-bit little-endian at 24&nbsp;kHz.
+      </p>
+      <section>
+        <h2>Speech-to-text</h2>
+        <p>
+          Connect to <code>/ws/stt</code> and stream microphone frames as binary
+          PCM. Transcript events from Cartesia Ink-2 come back as JSON.
+        </p>
+      </section>
+      <section>
+        <h2>Text-to-speech</h2>
+        <p>
+          Connect to <code>/ws/tts</code>, send JSON such as
+          <code>{"text":"Hello"}</code>, and play the binary PCM chunks as they
+          arrive from Sonic.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
