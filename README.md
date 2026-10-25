@@ -16,7 +16,7 @@ raw Ink audio turns.
 ## Install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/shijiegu/stutter-health.git
 cd stutter-health
 
 python3 -m venv .venv
