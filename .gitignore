@@ -4,7 +4,9 @@ __pycache__/
 *.py[cod]
 *.pcm
 *.wav
+!data/test_clips/*.pcm
 .env
 .DS_Store
 .pytest_cache/
 .mypy_cache/
+logs/

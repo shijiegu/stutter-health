@@ -1,78 +1,1095 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>stutter-health</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        --bg: #0f1419;
-        --panel: #1a2330;
-        --text: #e8eef5;
-        --muted: #93a4b8;
-        --accent: #4fd1c5;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-      }
-      main {
-        max-width: 720px;
-        margin: 0 auto;
-        padding: 2.5rem 1.25rem 4rem;
-      }
-      h1 {
-        font-size: 1.75rem;
-        margin: 0 0 0.5rem;
-      }
-      p {
-        color: var(--muted);
-        line-height: 1.5;
-      }
-      section {
-        background: var(--panel);
-        border-radius: 16px;
-        padding: 1.25rem 1.4rem;
-        margin-top: 1.25rem;
-      }
-      h2 {
-        margin: 0 0 0.5rem;
-        font-size: 1.05rem;
-      }
-      code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        color: var(--accent);
-      }
-    </style>
+    <title>StutterHealth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#070b12",
+              panel: "#121a26",
+              line: "#243044",
+              mint: "#5eead4",
+            },
+          },
+        },
+      };
+    </script>
   </head>
-  <body>
-    <main>
-      <h1>stutter-health</h1>
-      <p>
-        Baseline shell for an ultra-low-latency accessibility client. Audio on
-        the wire is raw PCM 16-bit little-endian at 24&nbsp;kHz.
-      </p>
-      <section>
-        <h2>Speech-to-text</h2>
-        <p>
-          Connect to <code>/ws/stt</code> and stream microphone frames as binary
-          PCM. Transcript events from Cartesia Ink-2 come back as JSON.
+  <body class="min-h-full bg-ink text-slate-100 antialiased">
+    <main class="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-8 sm:px-8">
+      <header class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Voice Assistant</p>
+          <h1 class="mt-1 text-3xl font-semibold tracking-tight text-mint">StutterHealth</h1>
+          <p id="ui-build" class="text-[10px] text-slate-600">ui 2026-10-25j</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div
+            id="status-pill"
+            class="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-4 py-2 text-sm font-medium"
+            role="status"
+            aria-live="polite"
+          >
+            <span id="status-dot" class="h-2.5 w-2.5 rounded-full bg-slate-500"></span>
+            <span id="status-label">Idle</span>
+          </div>
+          <p id="voice-label" class="text-xs text-slate-400">Voice: default</p>
+          <button
+            id="listen-btn"
+            type="button"
+            class="rounded-full bg-mint px-5 py-2 text-sm font-semibold text-ink hover:bg-teal-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-mint"
+          >
+            Start listening
+          </button>
+        </div>
+      </header>
+
+      <section class="rounded-3xl border border-line bg-panel p-6 shadow-xl shadow-black/30">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 class="text-sm font-semibold uppercase tracking-widest text-slate-400">Dictation</h2>
+          <p id="audio-turn-status" class="text-xs uppercase tracking-widest text-slate-500">Audio turn: idle</p>
+        </div>
+        <p
+          id="transcript"
+          class="mt-4 min-h-[10rem] text-2xl font-medium leading-snug text-slate-50 sm:min-h-[12rem] sm:text-4xl"
+          aria-live="polite"
+        >
+          Tap start and speak. Captions append live. A later semantic gap may clear this box and re-show the new sentence.
         </p>
+        <p id="audio-turn" class="mt-4 min-h-[1.5rem] text-sm leading-relaxed text-slate-500"></p>
       </section>
+
       <section>
-        <h2>Text-to-speech</h2>
-        <p>
-          Connect to <code>/ws/tts</code>, send JSON such as
-          <code>{"text":"Hello"}</code>, and play the binary PCM chunks as they
-          arrive from Sonic.
-        </p>
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-400">Suggested Words</h2>
+        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+          <button type="button" class="word-btn" data-index="0" disabled>Option 1</button>
+          <button type="button" class="word-btn" data-index="1" disabled>Option 2</button>
+          <button type="button" class="word-btn" data-index="2" disabled>Option 3</button>
+          <button type="button" class="word-btn" data-index="3" disabled>Option 4</button>
+        </div>
+        <button
+          id="finish-btn"
+          type="button"
+          disabled
+          class="mt-4 w-full rounded-2xl border border-line bg-panel px-5 py-4 text-lg font-semibold text-slate-200 hover:border-mint focus:outline-none focus-visible:ring-2 focus-visible:ring-mint disabled:text-slate-500"
+        >
+          Finish Sentence for Me
+        </button>
       </section>
     </main>
+
+    <style>
+      .word-btn {
+        min-height: 5.5rem;
+        border-radius: 1.25rem;
+        border: 1px solid #243044;
+        background: #0d141f;
+        padding: 1rem 1.25rem;
+        font-size: 1.5rem;
+        font-weight: 650;
+        color: #e2e8f0;
+      }
+      .word-btn:disabled {
+        color: #64748b;
+      }
+      .word-btn:not(:disabled):hover,
+      .word-btn:not(:disabled):focus-visible {
+        border-color: #5eead4;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.35);
+      }
+      .word-btn.flash {
+        animation: flash 0.9s ease;
+      }
+      @keyframes flash {
+        0%,
+        100% {
+          background: #0d141f;
+        }
+        40% {
+          background: #134e4a;
+        }
+      }
+    </style>
+
+    <script>
+      const PLAY_SAMPLE_RATE = 24000;
+      const STT_SAMPLE_RATE = 16000;
+      const STT_FRAME_SAMPLES = 1600;
+      const SESSION_DEBOUNCE_MS = 0;
+      const GAP_MS = 2500;
+      const wsBase = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+
+      const statusDot = document.getElementById("status-dot");
+      const statusLabel = document.getElementById("status-label");
+      const transcriptEl = document.getElementById("transcript");
+      const audioTurnEl = document.getElementById("audio-turn");
+      const audioTurnStatusEl = document.getElementById("audio-turn-status");
+      const listenBtn = document.getElementById("listen-btn");
+      const finishBtn = document.getElementById("finish-btn");
+      const wordButtons = Array.from(document.querySelectorAll(".word-btn"));
+
+      const state = {
+        status: "Idle",
+        listening: false,
+        isSpeaking: false,
+        micMuted: false,
+        lastPrediction: null,
+        lastTranscript: "",
+        sessionTranscript: "",
+        completedSentences: [],
+        currentUnstuttered: "",
+        caption: "",
+        inkTurn: "",
+        inkTurnRaw: "",
+        manualFinal: "",
+        manualPreview: "",
+        sttLockedPrefix: "",
+        sttTurnText: "",
+        pickedTail: "",
+        dictationLead: null,
+        committedDisplay: "",
+        sessionDebounceTimer: null,
+        expectNewAudioTurn: false,
+        sentenceComplete: false,
+        suggestionsFrozen: false,
+        pauseTimer: null,
+        gapTimer: null,
+        gapInFlight: false,
+        lastAppended: "",
+        predictSeq: 0,
+        predictCaptionAnchor: "",
+        predictCollapsedAnchor: "",
+        lastPausePredictGen: 0,
+        predictionSourceCaption: "",
+        predictionContextKey: "",
+        repetitionPredictLocked: false,
+        repetitionCollapsedAnchor: "",
+        stutterHoldToken: "",
+        contextId: crypto.randomUUID(),
+        history: [],
+        stt: null,
+        tts: null,
+        audioCtx: null,
+        playCtx: null,
+        processor: null,
+        mediaStream: null,
+        nextPlayTime: 0,
+        activeSources: 0,
+        unmuteTimer: null,
+      };
+
+      const statusStyles = {
+        Idle: "bg-slate-500",
+        "Listening...": "bg-emerald-400 animate-pulse",
+        "Completing sentence...": "bg-amber-400 animate-pulse",
+        "Speaking...": "bg-sky-400 animate-pulse",
+      };
+
+      function setStatus(next) {
+        state.status = next;
+        statusLabel.textContent = next;
+        statusDot.className = `h-2.5 w-2.5 rounded-full ${statusStyles[next] || "bg-slate-500"}`;
+      }
+
+      function sttCaptionBase() {
+        const turn = (state.sttTurnText || "").trim();
+        if (!turn && !(state.sttLockedPrefix || "").trim()) return "";
+        return state.sttLockedPrefix ? `${state.sttLockedPrefix} ${turn}`.trim() : turn;
+      }
+
+      function collapsedWords(text) {
+        return collapseTranscript(text).split(/\s+/).filter(Boolean);
+      }
+
+      function collapsedEndsWith(text, suffix) {
+        const words = collapsedWords(text);
+        const tail = collapsedWords(suffix);
+        if (!tail.length) return true;
+        if (words.length < tail.length) return false;
+        for (let i = 0; i < tail.length; i += 1) {
+          const left = words[words.length - tail.length + i].toLowerCase();
+          const right = tail[i].toLowerCase();
+          if (left !== right) return false;
+        }
+        return true;
+      }
+
+      function reconcilePickedTail() {
+        const tail = (state.pickedTail || "").trim();
+        if (!tail) return;
+        const base = sttCaptionBase();
+        if (!base) return;
+        if (collapsedEndsWith(base, tail)) {
+          state.pickedTail = "";
+        }
+      }
+
+      function paintDictationLine(line) {
+        state.caption = (line || "").trim();
+        if (!state.caption) return;
+        transcriptEl.dataset.live = "1";
+        transcriptEl.textContent = state.caption;
+      }
+
+      function releaseDictationLeadIfCaughtUp() {
+        if (state.dictationLead !== "session") return;
+        const sess = collapseTranscript(state.currentUnstuttered || "");
+        const stt = fullUtteranceCollapsed();
+        if (!sess) return;
+        if (collapsedWords(stt).length >= collapsedWords(sess).length) {
+          state.dictationLead = null;
+        }
+      }
+
+      function appendWordToLine(line, word) {
+        line = (line || "").trim();
+        word = (word || "").trim();
+        if (!word) return line;
+        if (!line) return word;
+        if (line.toLowerCase().endsWith(word.toLowerCase())) return line;
+        if (word.toLowerCase().startsWith(line.toLowerCase())) return word;
+        return `${line} ${word}`.trim();
+      }
+
+      function currentSentenceDictationLine() {
+        const sttLine = stripCompletedPrefixFromText(
+          [sttCaptionBase(), state.pickedTail].filter(Boolean).join(" ").trim()
+        );
+        const sess = stripCompletedPrefixFromText(state.currentUnstuttered || "");
+        const committed = stripCompletedPrefixFromText(state.committedDisplay || "");
+        let best = sttLine;
+        for (const candidate of [sess, committed]) {
+          if (!candidate) continue;
+          if (collapsedWords(candidate).length >= collapsedWords(best).length) {
+            best = candidate;
+          }
+        }
+        return best;
+      }
+
+      function completedSentencesDisplayPrefix() {
+        return (state.completedSentences || [])
+          .map((sentence) => String(sentence || "").trim())
+          .filter(Boolean)
+          .join(" ");
+      }
+
+      function stripCompletedPrefixFromText(text) {
+        let incoming = collapseTranscript(String(text || "")).trim();
+        if (!incoming || !state.completedSentences.length) return incoming;
+        let incWords = collapsedWords(incoming);
+        let changed = true;
+        while (changed && incWords.length) {
+          changed = false;
+          for (let i = state.completedSentences.length - 1; i >= 0; i -= 1) {
+            const sent = collapseTranscript(String(state.completedSentences[i] || "")).trim();
+            if (!sent) continue;
+            const preWords = collapsedWords(sent);
+            let matched = 0;
+            while (
+              matched < preWords.length &&
+              matched < incWords.length &&
+              incWords[matched].toLowerCase() === preWords[matched].toLowerCase()
+            ) {
+              matched += 1;
+            }
+            let stripN = 0;
+            if (matched >= preWords.length) {
+              stripN = matched;
+            } else if (preWords.length >= 3 && matched >= 3 && matched < preWords.length) {
+              stripN = matched;
+            }
+            if (stripN > 0) {
+              incWords = incWords.slice(stripN);
+              incoming = incWords.join(" ").trim();
+              changed = true;
+              break;
+            }
+          }
+        }
+        return incoming;
+      }
+
+      function normalizeCurrentUnstuttered() {
+        const stripped = stripCompletedPrefixFromText(state.currentUnstuttered || "");
+        if (stripped !== collapseTranscript(state.currentUnstuttered || "").trim()) {
+          state.currentUnstuttered = stripped;
+        }
+      }
+
+      function effectiveDictationLine() {
+        const current = currentSentenceDictationLine();
+        const prefix = completedSentencesDisplayPrefix();
+        if (!prefix) return current;
+        if (!current) return prefix;
+        return `${prefix} ${current}`.trim();
+      }
+
+      function paintSessionDictation() {
+        paintDictationLine(effectiveDictationLine());
+      }
+
+      function syncCaptionDisplay() {
+        reconcilePickedTail();
+        paintDictationLine(effectiveDictationLine());
+      }
+
+      function showLiveCaption(transcript) {
+        const turn = String(transcript || "").trim();
+        if (!turn) return;
+        state.inkTurnRaw = turn;
+        state.sttTurnText = turn;
+        state.inkTurn = turn;
+        releaseDictationLeadIfCaughtUp();
+        syncCaptionDisplay();
+      }
+
+      function lockSttTurn() {
+        const chunk = state.sttTurnText.trim();
+        if (!chunk) return;
+        state.sttLockedPrefix = [state.sttLockedPrefix, chunk].filter(Boolean).join(" ");
+        state.sttTurnText = "";
+        state.inkTurn = "";
+      }
+
+      function fullUtteranceCollapsed() {
+        const parts = [state.sttLockedPrefix, state.sttTurnText, state.pickedTail].filter(Boolean);
+        return collapseTranscript(parts.join(" "));
+      }
+
+      function renderDictation() {
+        if (!state.caption && !state.listening) {
+          transcriptEl.dataset.live = "0";
+          transcriptEl.textContent =
+            "Tap start and speak. Captions append live. A later semantic gap may clear this box and re-show the new sentence.";
+        }
+        audioTurnEl.textContent = state.inkTurn ? `Hearing: ${state.inkTurn}` : "";
+        if (!state.listening) {
+          audioTurnStatusEl.textContent = "Audio turn: idle";
+        } else if (state.sttTurnText.trim() || state.caption.trim()) {
+          audioTurnStatusEl.textContent = "Audio turn: open";
+        } else if (state.expectNewAudioTurn) {
+          audioTurnStatusEl.textContent = "Audio turn: waiting";
+        } else {
+          audioTurnStatusEl.textContent = "Audio turn: listening";
+        }
+      }
+
+      function collapseTranscript(text) {
+        const tokens = String(text || "").match(/[A-Za-z']+(?:-[A-Za-z']+)*/g) || [];
+        const out = [];
+        tokens.forEach((token) => {
+          const parts = token.split("-").filter(Boolean);
+          const core = parts[parts.length - 1];
+          if (out.length && out[out.length - 1].toLowerCase() === core.toLowerCase()) return;
+          out.push(core);
+        });
+        return out.join(" ");
+      }
+
+      function bumpPredictSeq() {
+        state.predictSeq += 1;
+      }
+
+      function captionUnchangedSince(snapshot) {
+        return snapshot === (state.caption || "").trim();
+      }
+
+      function currentPredictContextKey() {
+        const cap = (state.caption || "").trim();
+        return fullUtteranceCollapsed() || collapseTranscript(cap);
+      }
+
+      function predictContextMatches(issued, now) {
+        issued = (issued || "").trim();
+        now = (now || "").trim();
+        if (!issued) return true;
+        if (now === issued) return true;
+        return collapseTranscript(now) === collapseTranscript(issued);
+      }
+
+      function collapsedSuffixMatch(a, b, minWords = 3) {
+        const aw = collapsedWords(a);
+        const bw = collapsedWords(b);
+        if (!aw.length || !bw.length) return false;
+        const n = Math.min(aw.length, bw.length, 8);
+        if (n < minWords) return false;
+        return aw.slice(-n).join(" ") === bw.slice(-n).join(" ");
+      }
+
+      function pausePredictMatches(payload) {
+        const issuedKeys = [
+          payload.context_key,
+          payload.current_key,
+          payload.raw_partial,
+        ]
+          .map((value) => collapseTranscript(String(value || "")))
+          .filter(Boolean);
+        if (!issuedKeys.length) return true;
+        const localKeys = [
+          currentPredictContextKey(),
+          collapseTranscript(state.currentUnstuttered || ""),
+          collapseTranscript(state.caption || ""),
+        ].filter(Boolean);
+        for (const issued of issuedKeys) {
+          for (const local of localKeys) {
+            if (issued === local) return true;
+            if (collapsedSuffixMatch(issued, local)) return true;
+          }
+        }
+        return false;
+      }
+
+      function archiveLineForNextSentence(closedLine) {
+        const line = stripCompletedPrefixFromText(closedLine || "").trim() || (closedLine || "").trim();
+        if (line) {
+          const last = state.completedSentences[state.completedSentences.length - 1];
+          const same =
+            last && collapseTranscript(last) === collapseTranscript(line);
+          if (!same) state.completedSentences.push(line);
+        }
+        state.currentUnstuttered = "";
+        state.sttLockedPrefix = "";
+        state.sttTurnText = "";
+        state.pickedTail = "";
+        state.committedDisplay = "";
+        state.dictationLead = null;
+        syncCaptionDisplay();
+        publishSessionContext();
+      }
+
+      function noteCaptionChange() {
+        const cap = (state.caption || "").trim();
+        const collapsed = collapseTranscript(currentPredictContextKey());
+        if (collapsed === state.predictCollapsedAnchor) {
+          return;
+        }
+        if (state.repetitionPredictLocked && state.lastPrediction) {
+          return;
+        }
+        state.predictCaptionAnchor = cap;
+        state.predictCollapsedAnchor = collapsed;
+        bumpPredictSeq();
+        invalidateShownPredict();
+      }
+
+      function clearRepetitionPredictLock() {
+        state.repetitionPredictLocked = false;
+        state.repetitionCollapsedAnchor = "";
+        state.stutterHoldToken = "";
+      }
+
+      function invalidateShownPredict() {
+        state.lastPrediction = null;
+        state.predictionSourceCaption = "";
+        state.predictionContextKey = "";
+        state.suggestionsFrozen = false;
+        populateOptions([]);
+        finishBtn.disabled = true;
+      }
+
+      function downsample(input, inRate, outRate) {
+        if (inRate === outRate) return input;
+        const ratio = inRate / outRate;
+        const outLength = Math.floor(input.length / ratio);
+        const output = new Float32Array(outLength);
+        for (let i = 0; i < outLength; i += 1) {
+          const position = i * ratio;
+          const index = Math.floor(position);
+          const next = Math.min(index + 1, input.length - 1);
+          const frac = position - index;
+          output[i] = input[index] * (1 - frac) + input[next] * frac;
+        }
+        return output;
+      }
+
+      function floatToPcm16(float32) {
+        const buffer = new ArrayBuffer(float32.length * 2);
+        const view = new DataView(buffer);
+        for (let i = 0; i < float32.length; i += 1) {
+          let sample = Math.max(-1, Math.min(1, float32[i]));
+          view.setInt16(i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+        }
+        return buffer;
+      }
+
+      function pcm16ToFloat(bytes) {
+        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        const float32 = new Float32Array(bytes.byteLength / 2);
+        for (let i = 0; i < float32.length; i += 1) {
+          float32[i] = view.getInt16(i * 2, true) / 0x8000;
+        }
+        return float32;
+      }
+
+      function muteMic() {
+        state.isSpeaking = true;
+        state.micMuted = true;
+        clearTimeout(state.unmuteTimer);
+      }
+
+      function scheduleUnmute() {
+        clearTimeout(state.unmuteTimer);
+        state.unmuteTimer = setTimeout(() => {
+          if (state.activeSources === 0) {
+            state.isSpeaking = false;
+            state.micMuted = false;
+            if (state.listening) setStatus("Listening...");
+          }
+        }, 180);
+      }
+
+      async function ensurePlayContext() {
+        if (!state.playCtx) {
+          state.playCtx = new AudioContext({ sampleRate: PLAY_SAMPLE_RATE });
+        }
+        if (state.playCtx.state === "suspended") await state.playCtx.resume();
+        return state.playCtx;
+      }
+
+      async function playPcmChunk(bytes) {
+        const ctx = await ensurePlayContext();
+        muteMic();
+        setStatus("Speaking...");
+        const float32 = pcm16ToFloat(new Uint8Array(bytes));
+        if (!float32.length) return;
+        const buffer = ctx.createBuffer(1, float32.length, PLAY_SAMPLE_RATE);
+        buffer.getChannelData(0).set(float32);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        const now = ctx.currentTime;
+        if (state.nextPlayTime < now) state.nextPlayTime = now;
+        source.start(state.nextPlayTime);
+        state.nextPlayTime += buffer.duration;
+        state.activeSources += 1;
+        source.onended = () => {
+          state.activeSources = Math.max(0, state.activeSources - 1);
+          if (state.activeSources === 0) scheduleUnmute();
+        };
+      }
+
+      function connectTts() {
+        if (state.tts && state.tts.readyState < 2) return;
+        state.tts = new WebSocket(`${wsBase}/ws/tts`);
+        state.tts.binaryType = "arraybuffer";
+        state.tts.onmessage = async (event) => {
+          if (event.data instanceof ArrayBuffer) {
+            await playPcmChunk(event.data);
+            return;
+          }
+          let payload = event.data;
+          try {
+            payload = JSON.parse(event.data);
+          } catch (err) {
+            return;
+          }
+          if (payload.type === "done") {
+            scheduleUnmute();
+          }
+        };
+        state.tts.onclose = () => {
+          if (state.listening) setTimeout(connectTts, 400);
+        };
+      }
+
+      function sendTts(text) {
+        if (!text) return;
+        muteMic();
+        setStatus("Speaking...");
+        connectTts();
+        const payload = JSON.stringify({
+          text,
+          context_id: state.contextId,
+          continue_context: true,
+        });
+        const send = () => state.tts.send(payload);
+        if (state.tts.readyState === WebSocket.OPEN) send();
+        else state.tts.addEventListener("open", send, { once: true });
+      }
+
+      function populateOptions(options) {
+        wordButtons.forEach((button, index) => {
+          const word = (options && options[index]) || "";
+          button.textContent = word || `Option ${index + 1}`;
+          button.disabled = !word;
+          button.classList.remove("flash");
+          if (word) {
+            void button.offsetWidth;
+            button.classList.add("flash");
+          }
+        });
+      }
+
+      function applyPrediction(
+        prediction,
+        { force = false, seq = null, snapshot = null, contextKey = null, predictGen = null } = {}
+      ) {
+        if (!prediction) return;
+        if (predictGen !== null && predictGen < state.lastPausePredictGen) return;
+        if (seq !== null && seq !== state.predictSeq) return;
+        if (!force && snapshot !== null && !captionUnchangedSince(snapshot)) return;
+        if (
+          contextKey !== null &&
+          contextKey !== currentPredictContextKey() &&
+          !collapsedSuffixMatch(contextKey, currentPredictContextKey())
+        ) {
+          return;
+        }
+        if (state.lastPrediction && !force) return;
+        state.lastPrediction = prediction;
+        state.predictionSourceCaption = (state.caption || "").trim();
+        state.predictionContextKey = contextKey || currentPredictContextKey();
+        if (predictGen !== null) state.lastPausePredictGen = predictGen;
+        state.suggestionsFrozen = true;
+        clearTimeout(state.pauseTimer);
+        populateOptions(prediction.options || []);
+        finishBtn.disabled = !prediction.auto_complete;
+        if (state.listening) setStatus("Listening...");
+      }
+
+      function appendTranscript(current, audioTurn, incoming, newAudio) {
+        incoming = (incoming || "").trim();
+        current = (current || "").trim();
+        audioTurn = newAudio ? "" : (audioTurn || "").trim();
+        if (!incoming) return { text: current, audioTurn, delta: "" };
+        if (!current) return { text: incoming, audioTurn: incoming, delta: incoming };
+        if (current.endsWith(incoming) || incoming === audioTurn) {
+          return { text: current, audioTurn: incoming, delta: "" };
+        }
+        const incomingWords = incoming.split(/\s+/).filter(Boolean).length;
+        if (incomingWords >= 4 && (current.startsWith(incoming) || current.includes(incoming))) {
+          return { text: current, audioTurn: audioTurn || incoming, delta: "" };
+        }
+        if (incoming.startsWith(current)) {
+          const delta = incoming.slice(current.length).trim();
+          return {
+            text: delta ? `${current} ${delta}`.trim() : current,
+            audioTurn: incoming,
+            delta,
+          };
+        }
+        if (audioTurn && incoming.startsWith(audioTurn)) {
+          const delta = incoming.slice(audioTurn.length).trim();
+          if (!delta) return { text: current, audioTurn: incoming, delta: "" };
+          return { text: `${current} ${delta}`.trim(), audioTurn: incoming, delta };
+        }
+        return { text: `${current} ${incoming}`.trim(), audioTurn: incoming, delta: incoming };
+      }
+
+      function formatSession(completed, current) {
+        const lines = [];
+        (completed || []).forEach((sentence) => {
+          const text = String(sentence || "").trim();
+          if (text) lines.push(`${lines.length + 1}. ${text}`);
+        });
+        const live = String(current || "").trim();
+        if (live) lines.push(`${lines.length + 1}. ${live}`);
+        return lines.join("\n");
+      }
+
+      function publishSessionContext() {
+        state.sessionTranscript = formatSession(state.completedSentences, state.currentUnstuttered);
+        state.history = [{ role: "user", content: state.sessionTranscript }];
+      }
+
+      function scheduleSessionIngest(collapsed) {
+        if (!collapsed) return;
+        clearTimeout(state.sessionDebounceTimer);
+        state.sessionDebounceTimer = setTimeout(() => {
+          ingestAudio(collapsed);
+        }, SESSION_DEBOUNCE_MS);
+      }
+
+      function ingestAudio(collapsed) {
+        if (!collapsed) return;
+        let incoming = collapseTranscript(collapsed).trim();
+        incoming = stripCompletedPrefixFromText(incoming);
+        if (!incoming) return;
+        const current = collapseTranscript(state.currentUnstuttered || "").trim();
+        const incWords = collapsedWords(incoming).length;
+        const curWords = collapsedWords(current).length;
+        if (!current) {
+          state.currentUnstuttered = incoming;
+        } else if (incWords > curWords) {
+          state.currentUnstuttered = incoming;
+        } else if (!current.includes(incoming) && !incoming.includes(current)) {
+          state.currentUnstuttered = incoming;
+        }
+        state.lastTranscript = state.currentUnstuttered;
+        state.expectNewAudioTurn = false;
+        publishSessionContext();
+      }
+
+      function scheduleSemanticGap() {
+        clearTimeout(state.gapTimer);
+        state.gapTimer = setTimeout(() => {
+          requestSemanticGap().catch((err) => console.error(err));
+        }, GAP_MS);
+      }
+
+      async function requestSemanticGap() {
+        if (state.gapInFlight || !state.caption || state.micMuted) return;
+        state.gapInFlight = true;
+        try {
+          const response = await fetch("/api/semantic-gap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              caption: state.caption,
+              session: state.sessionTranscript,
+              latest: state.lastAppended || state.inkTurn,
+            }),
+          });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (!data.gap || !data.caption || data.caption === state.caption) return;
+          const shown = String(data.caption).trim();
+          const previous = (state.currentUnstuttered || "").trim();
+          if (shown && previous.endsWith(shown) && previous !== shown) {
+            const head = previous.slice(0, previous.length - shown.length).trim();
+            if (head) state.completedSentences.push(head);
+            state.currentUnstuttered = shown;
+          } else if (previous && previous !== shown) {
+            state.completedSentences.push(previous);
+            state.currentUnstuttered = shown;
+          }
+          state.pickedTail = "";
+          state.dictationLead = null;
+          state.committedDisplay = "";
+          state.sttLockedPrefix = shown;
+          state.sttTurnText = "";
+          state.lastPrediction = null;
+          state.suggestionsFrozen = false;
+          populateOptions([]);
+          finishBtn.disabled = true;
+          publishSessionContext();
+          syncCaptionDisplay();
+          renderDictation();
+        } finally {
+          state.gapInFlight = false;
+        }
+      }
+
+      function handleSttPayload(payload) {
+        if (payload.type === "turn.start") {
+          state.expectNewAudioTurn = false;
+          if (state.completedSentences.length && !state.currentUnstuttered.trim()) {
+            state.sttLockedPrefix = "";
+            state.sttTurnText = "";
+            state.pickedTail = "";
+          }
+          renderDictation();
+          return;
+        }
+        if (payload.type === "turn.resume") {
+          state.expectNewAudioTurn = false;
+          return;
+        }
+        if (payload.type === "repetition") {
+          const collapsed = collapseTranscript(String(payload.collapsed || ""));
+          const token = String(payload.token || "").toLowerCase();
+          const hold = (state.stutterHoldToken || "").toLowerCase();
+          if (
+            state.repetitionPredictLocked &&
+            state.lastPrediction &&
+            token &&
+            hold &&
+            token === hold &&
+            collapsed === state.repetitionCollapsedAnchor
+          ) {
+            return;
+          }
+          if (payload.predict_ready && token && hold && token !== hold) {
+            invalidateShownPredict();
+            clearRepetitionPredictLock();
+          }
+          state.repetitionCollapsedAnchor = collapsed;
+          if (payload.predict_ready === false) {
+            return;
+          }
+          return;
+        }
+        if (payload.type === "pause_predict") {
+          const gen = typeof payload.predict_gen === "number" ? payload.predict_gen : 0;
+          const nowCaption = (state.caption || "").trim();
+          if (!payload.predict) return;
+          const hold = String(payload.stutter_token || "").toLowerCase();
+          const active = String(
+            payload.active_stutter_token || payload.stutter_token || ""
+          ).toLowerCase();
+          const shown = (state.stutterHoldToken || "").toLowerCase();
+          if (
+            payload.repetition_hold &&
+            state.lastPrediction &&
+            hold &&
+            active === hold &&
+            shown === hold
+          ) {
+            return;
+          }
+          if (!pausePredictMatches(payload)) return;
+          setStatus("Completing sentence...");
+          applyPrediction(payload.predict, {
+            force: true,
+            snapshot: nowCaption,
+            predictGen: gen,
+          });
+          if (payload.repetition_hold || payload.stutter_token) {
+            state.repetitionPredictLocked = true;
+            state.stutterHoldToken =
+              payload.stutter_token || payload.active_stutter_token || state.stutterHoldToken;
+            state.repetitionCollapsedAnchor = collapseTranscript(
+              payload.current_key || payload.context_key || state.repetitionCollapsedAnchor
+            );
+          }
+          return;
+        }
+        if (
+          typeof payload.transcript === "string" &&
+          payload.transcript &&
+          (payload.type === "turn.update" ||
+            payload.type === "turn.eager_end" ||
+            payload.type === "turn.end")
+        ) {
+          showLiveCaption(payload.transcript);
+          clearTimeout(state.sessionDebounceTimer);
+          ingestAudio(fullUtteranceCollapsed());
+          const collapsedNow = collapseTranscript(
+            state.currentUnstuttered || fullUtteranceCollapsed()
+          );
+          if (
+            state.repetitionPredictLocked &&
+            state.repetitionCollapsedAnchor &&
+            collapsedNow !== state.repetitionCollapsedAnchor
+          ) {
+            clearRepetitionPredictLock();
+          }
+          noteCaptionChange();
+          renderDictation();
+        }
+        if (payload.type === "turn.end") {
+          state.expectNewAudioTurn = true;
+          lockSttTurn();
+          scheduleSemanticGap();
+          renderDictation();
+        }
+      }
+
+      function connectStt() {
+        state.stt = new WebSocket(`${wsBase}/ws/stt`);
+        state.stt.binaryType = "arraybuffer";
+        state.stt.onopen = () => setStatus("Listening...");
+        state.stt.onmessage = (event) => {
+          if (typeof event.data !== "string") return;
+          try {
+            handleSttPayload(JSON.parse(event.data));
+          } catch (err) {
+            console.error(err);
+          }
+        };
+        state.stt.onclose = () => {
+          if (state.listening) setTimeout(connectStt, 400);
+        };
+      }
+
+      async function startMic() {
+        state.mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        });
+        state.audioCtx = new AudioContext({ latencyHint: "interactive" });
+        if (state.audioCtx.state === "suspended") await state.audioCtx.resume();
+        const source = state.audioCtx.createMediaStreamSource(state.mediaStream);
+        const processor = state.audioCtx.createScriptProcessor(1024, 1, 1);
+        const silencePcm = new ArrayBuffer(STT_FRAME_SAMPLES * 2);
+        let leftover = new Float32Array(0);
+        processor.onaudioprocess = (event) => {
+          if (!state.stt || state.stt.readyState !== WebSocket.OPEN) return;
+          if (state.isSpeaking || state.micMuted) {
+            state.stt.send(silencePcm);
+            return;
+          }
+          const input = event.inputBuffer.getChannelData(0);
+          const down = downsample(input, state.audioCtx.sampleRate, STT_SAMPLE_RATE);
+          const merged = new Float32Array(leftover.length + down.length);
+          merged.set(leftover);
+          merged.set(down, leftover.length);
+          let offset = 0;
+          while (merged.length - offset >= STT_FRAME_SAMPLES) {
+            const pcm = floatToPcm16(merged.subarray(offset, offset + STT_FRAME_SAMPLES));
+            state.stt.send(pcm);
+            offset += STT_FRAME_SAMPLES;
+          }
+          leftover = merged.subarray(offset);
+        };
+        const silent = state.audioCtx.createGain();
+        silent.gain.value = 0;
+        source.connect(processor);
+        processor.connect(silent);
+        silent.connect(state.audioCtx.destination);
+        state.processor = processor;
+      }
+
+      async function toggleListen() {
+        if (state.listening) {
+          state.listening = false;
+          clearTimeout(state.pauseTimer);
+          clearTimeout(state.gapTimer);
+          clearTimeout(state.sessionDebounceTimer);
+          if (state.stt) state.stt.close();
+          if (state.processor) state.processor.disconnect();
+          if (state.audioCtx) await state.audioCtx.close();
+          if (state.mediaStream) state.mediaStream.getTracks().forEach((track) => track.stop());
+          setStatus("Idle");
+          listenBtn.textContent = "Start listening";
+          renderDictation();
+          return;
+        }
+        state.sessionTranscript = "";
+        state.completedSentences = [];
+        state.currentUnstuttered = "";
+        state.caption = "";
+        state.manualFinal = "";
+        state.manualPreview = "";
+        state.sttLockedPrefix = "";
+        state.sttTurnText = "";
+        state.pickedTail = "";
+        state.dictationLead = null;
+        state.committedDisplay = "";
+        state.inkTurn = "";
+        state.inkTurnRaw = "";
+        state.lastAppended = "";
+        state.expectNewAudioTurn = false;
+        state.sentenceComplete = false;
+        state.lastPrediction = null;
+        state.predictionSourceCaption = "";
+        state.predictionContextKey = "";
+        state.predictCaptionAnchor = "";
+        state.predictCollapsedAnchor = "";
+        state.lastPausePredictGen = 0;
+        state.suggestionsFrozen = false;
+        clearRepetitionPredictLock();
+        connectTts();
+        connectStt();
+        await startMic();
+        state.listening = true;
+        listenBtn.textContent = "Stop";
+        setStatus("Listening...");
+        renderDictation();
+      }
+
+      listenBtn.addEventListener("click", () => {
+        toggleListen().catch((err) => {
+          console.error(err);
+          setStatus("Idle");
+          alert("Microphone permission is required.");
+        });
+      });
+
+      function commitChosenText(text, sentenceComplete) {
+        text = String(text || "").trim();
+        if (!text) return;
+        const pickedFromPrediction = Boolean(state.lastPrediction);
+        const archiveAfterPick = pickedFromPrediction || sentenceComplete;
+        sendTts(text);
+        normalizeCurrentUnstuttered();
+        let pickedDelta = "";
+        const replace = Boolean(
+          state.currentUnstuttered && text.startsWith(state.currentUnstuttered)
+        );
+        if (replace) {
+          pickedDelta = text.slice(state.currentUnstuttered.length).trim();
+          state.currentUnstuttered = text;
+        } else {
+          const next = appendTranscript(state.currentUnstuttered, state.inkTurn, text, true);
+          state.currentUnstuttered = next.text;
+          pickedDelta = next.delta || text.trim();
+          const cur = (state.currentUnstuttered || "").trim();
+          const word = text.trim();
+          if (
+            word &&
+            cur &&
+            !cur.toLowerCase().endsWith(word.toLowerCase()) &&
+            word.split(/\s+/).length === 1
+          ) {
+            state.currentUnstuttered = `${cur} ${word}`.trim();
+            pickedDelta = word;
+          }
+        }
+        if (pickedDelta) {
+          state.pickedTail = state.pickedTail
+            ? `${state.pickedTail} ${pickedDelta}`.trim()
+            : pickedDelta;
+        }
+        state.inkTurn = "";
+        state.expectNewAudioTurn = true;
+        state.sentenceComplete = Boolean(sentenceComplete);
+        normalizeCurrentUnstuttered();
+        const visibleBase = (
+          stripCompletedPrefixFromText(state.currentUnstuttered || "") ||
+          currentSentenceDictationLine() ||
+          sttCaptionBase() ||
+          ""
+        ).trim();
+        const word = pickedDelta || text;
+        state.committedDisplay = appendWordToLine(visibleBase, word);
+        state.currentUnstuttered = stripCompletedPrefixFromText(
+          state.currentUnstuttered || state.committedDisplay || text
+        ).trim();
+        normalizeCurrentUnstuttered();
+        syncCaptionDisplay();
+        const closedLine = stripCompletedPrefixFromText(
+          state.currentUnstuttered || state.committedDisplay || text
+        ).trim();
+        state.dictationLead = archiveAfterPick ? null : "session";
+        state.manualFinal = state.caption;
+        state.manualPreview = "";
+        publishSessionContext();
+        state.lastPrediction = null;
+        state.predictionSourceCaption = "";
+        state.predictionContextKey = "";
+        state.suggestionsFrozen = false;
+        populateOptions([]);
+        finishBtn.disabled = true;
+        clearRepetitionPredictLock();
+        if (state.stt && state.stt.readyState === WebSocket.OPEN) {
+          state.stt.send(
+            JSON.stringify({
+              type: "commit",
+              text: closedLine || state.currentUnstuttered || text,
+              sentence_complete: Boolean(sentenceComplete || pickedFromPrediction),
+            })
+          );
+        }
+        if (archiveAfterPick) {
+          archiveLineForNextSentence(closedLine);
+        }
+        noteCaptionChange();
+      }
+
+      wordButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.disabled) return;
+          commitChosenText(button.textContent);
+        });
+      });
+
+      finishBtn.addEventListener("click", () => {
+        const completion = state.lastPrediction && state.lastPrediction.auto_complete;
+        if (!completion) return;
+        commitChosenText(completion, true);
+      });
+    </script>
   </body>
 </html>

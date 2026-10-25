@@ -1,0 +1,18 @@
+[
+  {
+    "clip_id": "order_uh_piece",
+    "fluent": "I would like to order a piece of cake.",
+    "transcript": "I would like to order uh, uh, uh, piece of",
+    "stutter_type": "block",
+    "voice_id": "12e85709-099c-480a-ba3e-875c41a9611a",
+    "generation_config": {
+      "emotion": "hesitant",
+      "speed": 0.78
+    },
+    "locale": "en-AU",
+    "path": "data/test_clips/order_uh_piece.pcm",
+    "encoding": "pcm_s16le",
+    "sample_rate": 24000,
+    "bytes": 184320
+  }
+]

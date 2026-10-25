@@ -1,0 +1,28 @@
+---
+description: Required Cartesia API conventions for Sonic TTS, Ink STT, voices, and auth
+alwaysApply: true
+---
+
+# Cartesia integration
+
+You are helping a developer integrate Cartesia (Sonic TTS, Ink STT, voices, and related APIs).
+
+## Required
+
+1. Fetch [https://docs.cartesia.ai/llms.txt](https://docs.cartesia.ai/llms.txt) before guessing endpoints, parameters, or examples. Do not invent API fields or voice IDs.
+2. Follow [https://docs.cartesia.ai/use-the-api/api-conventions](https://docs.cartesia.ai/use-the-api/api-conventions) — send `Cartesia-Version` on every request.
+3. Base URL: `https://api.cartesia.ai` (WebSockets: `wss://`). HTTPS only.
+4. Default `Cartesia-Version`: `2026-08-14` unless the user specifies another date they tested with. On browser WebSockets, use `?cartesia_version=...` (query wins over header when both are set).
+5. Server/backend: `Authorization: Bearer <api_key>`. Create keys at [https://play.cartesia.ai/keys](https://play.cartesia.ai/keys).
+6. Browser/mobile: never embed API keys. Backend mints a short-lived access token (`POST /access-token` with a JSON body — `{}` or `{"grants":{"tts":true}}` — see [https://docs.cartesia.ai/get-started/authenticate-your-client-applications](https://docs.cartesia.ai/get-started/authenticate-your-client-applications)). Client calls Cartesia with `Authorization: Bearer <access_token>` (or `?access_token=` on WebSockets).
+7. Web “button → hear audio”: backend access-token endpoint → browser `POST /tts/bytes` with the token → response blob → `Audio.play()`. Examples: [https://docs.cartesia.ai/examples/tts-play-audio](https://docs.cartesia.ai/examples/tts-play-audio) and [https://docs.cartesia.ai/examples/nextjs](https://docs.cartesia.ai/examples/nextjs).
+8. Prefer official SDKs for app code: [https://github.com/cartesia-ai/cartesia-python](https://github.com/cartesia-ai/cartesia-python) and [https://github.com/cartesia-ai/cartesia-js](https://github.com/cartesia-ai/cartesia-js).
+9. Sonic speed, volume, emotion: use `generation_config` (e.g. `generation_config.speed`), not deprecated top-level `speed` on REST payloads — [https://docs.cartesia.ai/build-with-cartesia/capability-guides/volume-speed-emotion](https://docs.cartesia.ai/build-with-cartesia/capability-guides/volume-speed-emotion).
+10. Errors: for Cartesia-Version `2026-03-01` and newer, expect structured JSON — [https://docs.cartesia.ai/use-the-api/api-errors](https://docs.cartesia.ai/use-the-api/api-errors).
+11. Cartesia Managed Agents (voice agents, telephony, tools) is a separate product, documented at [https://docs.cartesia.ai/agents/introduction](https://docs.cartesia.ai/agents/introduction). It is not the same as calling TTS/STT REST APIs from the user's server.
+12. CORS: browsers can call `https://api.cartesia.ai` directly with an access token in typical setups; proxy TTS through the user's backend if the client cannot reach Cartesia (corporate network, custom security policy, etc.).
+
+## Optional
+
+- MCP: [https://docs.cartesia.ai/tools/ai/mcp](https://docs.cartesia.ai/tools/ai/mcp) — list voices, TTS/STT, dictionaries without custom scripts.
+- Agent skills: `npx skills add cartesia-ai/skills` and choose `cartesia-api` and/or `cartesia-line` — [https://docs.cartesia.ai/tools/ai/agent-skills](https://docs.cartesia.ai/tools/ai/agent-skills).
